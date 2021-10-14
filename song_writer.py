@@ -6,6 +6,7 @@ import pyaudio
 import random
 import music_degree
 from pynput import keyboard
+from concurrent.futures import ThreadPoolExecutor
 
 
 class MusicMaker():
@@ -18,6 +19,14 @@ class MusicMaker():
                                   output=1,)
 
 
+    def _init_piano_mode(self):
+        # For the piano utility
+        self.active_keys = []
+        self.sostenuto = False
+        self.process_pool = ThreadPoolExecutor(max_workers=8)
+        self.piano_mode = True
+
+
     def __enter__(self):
         return self
 
@@ -28,6 +37,38 @@ class MusicMaker():
         self.p.terminate()
 
 
+    def on_press(self, key):
+        if key == keyboard.Key.esc:
+            self.piano_mode = False
+            return False
+        try:
+            k = key.char.lower()
+        except:
+            k = key.name.lower()
+        if k in ['a', 's', 'd', 'f', 'j', 'k', 'l', ';']:
+            if k not in self.active_keys:
+                self.active_keys.append(k)
+            print(f'active keys: {self.active_keys}')
+        if k == 'shift':
+            self.sostenuto = True
+
+
+    def on_release(self, key):
+        if key == keyboard.Key.esc:
+            self.piano_mode = False
+            return False
+        try:
+            k = key.char.lower()
+        except:
+            k = key.name.lower()
+        if k in ['a', 's', 'd', 'f', 'j', 'k', 'l', ';']:
+            self.active_keys = [_ for _ in self.active_keys if _ != k]
+        if k == 'shift':
+            self.sostenuto = False
+        print(f'active keys: {self.active_keys}')
+        
+
+
     def sine_tone(self, frequency, duration, sostenuto = False):
         """Creates a tone for the given frequency and duration
         in the form of a sine wave.
@@ -35,7 +76,8 @@ class MusicMaker():
         Args:
             frequency (float): The frequency of the tone to play.
             duration (float): How long to play the tone in seconds.
-            sostenuto (boolean): If sustain should be applied. Default is False (exp. decay).
+            sostenuto (boolean, optional): True if sustain should be applied.
+                Default is False (exponential decay applied).
         """
 
         length = int(duration * self.sample_rate)
@@ -50,57 +92,83 @@ class MusicMaker():
         """Creates a random song given the scale and tempo in seconds per beat.
 
         Args:
-            key (str): The muscial scale to base the song on. Default is 'C4'.
-            scale (str): Either major or minor. Default is 'major'.
-            tempo (int): Measure of beats per minute. Default is 60.
+            key (str, optional): The muscial scale to base the song on. Default is 'C4'.
+            scale (str, optional): Either major or minor. Default is 'major'.
+            tempo (int, optional): Measure of beats per minute. Default is 60.
         """
         tempo_seconds = 60./tempo
         tones = list(music_degree.get_key(key, scale=scale, with_rests=True).values())
         while True:
-            self.sine_tone(self.stream,
-                           random.choice(tones),
+            self.sine_tone(random.choice(tones),
                            random.choice([tempo_seconds/4.,
                                           tempo_seconds/2.,
                                           tempo_seconds]))
 
 
-    def zeldas_lullaby(self):
+    def play_song(self, melody, beats, tempo=60):
         """Plays zelda's lullaby from Nintendo's Ocarina of Time. It is 3/4 time, so
         I will be using 6ths.
 
         Args:
-            stream (PyAudio stream object): An audio stream that tones can be added to.
+            melody (list[float]): List of notes to be played in the song.
+            beats (list[float]): Number of beats for each of the notes in the melody.
+            tempo (int, optional): Measure of beats per minute. Default is 60.
         """
-        t = music_degree.tone_map
-        melody = ['G3', 'B3', 'F3', 'E3', 'F3', 'G3', 'B3', 'F3',
-                'G3', 'B3', 'F4', 'E4', 'B3', 'A3', 'G3', 'F3',
-                'G3', 'B3', 'F3', 'E3', 'F3', 'G3', 'B3', 'F3',
-                'G3', 'B3', 'F4', 'E4', 'B3',
-                'B3', 'A3', 'G3', 'A3', 'G3', 'E3',
-                'A3', 'G3', 'F3', 'G3', 'F3', 'C3',
-                'B3', 'A3', 'G3', 'A3', 'G3', 'E3', 'A3', 'E4']
-        sixths = [4, 2, 4, 1, 1, 4, 2, 6, 4, 2, 4, 2, 4, 1, 1, 6,
-                4, 2, 4, 1, 1, 4, 2, 6, 4, 2, 4, 2, 12,
-                4, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 12]
-
         for i in range(len(melody)):
-            # /3.5 corrects the tempo
-            self.sine_tone(self.stream, t[melody[i]], sixths[i]/3.5)
+            self.sine_tone(melody[i], 60.*beats[i]/tempo)
+
+
+    def play_piano(self, keys):
+        """An interactive piano player that uses the keyboard as a keyboard!
+        A set of 8 keys is required that can be minor or major and maps to
+        the asdf and jkl; characters. Shift toggles sostenuto.
+
+        Args:
+            keys (dict): A set of notes and their frequencies for the keys
+                to map to.
+        """
+        print('Starting Piano mode:',
+              ' - Keys are in [asdfjkl;].'
+              ' - Press ESC to quit.')
+        self._init_piano_mode()
+        listener = keyboard.Listener(on_press=self.on_press,
+                                     on_release=self.on_release)
+        listener.start()  # start to listen on a separate thread
+        listener.join()  # remove if main thread is polling self.keys
 
 
 if __name__ == '__main__':
-    mode = 'play_key'
+    mode = 'piano'
 
     with MusicMaker() as m:
+        if mode == 'piano':
+            note = input('Please input a base note [C4]: ') or 'C4'
+            scale = input('Please input a scale ([major]/minor): ') or 'major'
+            m.play_piano(music_degree.get_key(note, scale=scale))
         if mode == 'random_song':
-            m.random_song()
-        elif mode == 'zelda':
-            m.zeldas_lullaby()
-        elif mode == 'play_note':
+            m.random_song(key='C4', tempo=60, scale='minor')
+        if mode == 'zeldas_lullaby':
+            t = music_degree.tone_map
+            melody = ['G3', 'B3', 'F3', 'E3', 'F3', 'G3', 'B3', 'F3',
+                      'G3', 'B3', 'F4', 'E4', 'B3', 'A3', 'G3', 'F3',
+                      'G3', 'B3', 'F3', 'E3', 'F3', 'G3', 'B3', 'F3',
+                      'G3', 'B3', 'F4', 'E4', 'B3',
+                      'B3', 'A3', 'G3', 'A3', 'G3', 'E3',
+                      'A3', 'G3', 'F3', 'G3', 'F3', 'C3',
+                      'B3', 'A3', 'G3', 'A3', 'G3', 'E3', 'A3', 'E4']
+            beats = [2, 1, 2, 0.5, 0.5, 2, 1, 3, 2, 1, 2, 1, 2, 0.5, 0.5, 3,
+                     2, 1, 2, 0.5, 0.5, 2, 1, 3, 2, 1, 2, 1, 6,
+                     2, 0.5, 0.5, 0.5, 0.5, 2, 2, 0.5, 0.5, 0.5, 0.5, 2,
+                     2, 0.5, 0.5, 0.5, 0.5, 1, 1, 6]
+            m.play_song([t[_] for _ in melody],
+                        [float(_) for _ in beats],
+                        tempo=120)
+        if mode == 'play_note':
+            # I use this one for tuning
             note = input('Please input a note [C4]: ') or 'C4'
             tone = music_degree.tone_map[note]
-            m.sine_tone(tone, 1, sostenuto = False)
-        elif mode == 'play_key':
+            m.sine_tone(tone, 2, sostenuto = True)
+        if mode == 'play_key':
             note = input('Please input a base note [C4]: ') or 'C4'
             scale = input('Please input a scale ([major]/minor): ') or 'major'
             key = music_degree.get_key(note, scale=scale)
