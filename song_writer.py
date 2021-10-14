@@ -55,8 +55,15 @@ def zeldas_lullaby(stream):
     """
     t = music_degree.tone_map
     melody = ['G3', 'B3', 'F3', 'E3', 'F3', 'G3', 'B3', 'F3',
-              'G3', 'B3', 'F4', 'E4', 'B3', 'A3', 'G3', 'F3']
-    sixths = [4, 2, 4, 1, 1, 4, 2, 6, 4, 2, 4, 2, 4, 1, 1, 6]
+              'G3', 'B3', 'F4', 'E4', 'B3', 'A3', 'G3', 'F3',
+              'G3', 'B3', 'F3', 'E3', 'F3', 'G3', 'B3', 'F3',
+              'G3', 'B3', 'F4', 'E4', 'B3',
+              'B3', 'A3', 'G3', 'A3', 'G3', 'E3',
+              'A3', 'G3', 'F3', 'G3', 'F3', 'C3',
+              'B3', 'A3', 'G3', 'A3', 'G3', 'E3', 'A3', 'E4']
+    sixths = [4, 2, 4, 1, 1, 4, 2, 6, 4, 2, 4, 2, 4, 1, 1, 6,
+              4, 2, 4, 1, 1, 4, 2, 6, 4, 2, 4, 2, 12,
+              4, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 12]
 
     for i in range(len(melody)):
         sine_tone(stream, t[melody[i]], sixths[i]/3.5)
@@ -72,8 +79,8 @@ if __name__ == '__main__':
                     output=1,)
     
     
-    random_song(stream)
-    # zeldas_lullaby(stream)
+    # random_song(stream)
+    zeldas_lullaby(stream)
 
     stream.stop_stream()
     stream.close()
