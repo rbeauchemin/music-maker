@@ -112,15 +112,17 @@ tone_map = {'C0': 16.35,
             'A_sharp_8/B_flat_8': 7458.62,
             'B8': 7902.13}
 
-def get_key(base_note, scale='major'):
+def get_key(base_note, scale='major', with_rests=False):
     """Returns a set of tones and their frequencies in either a major
     or a minor key
 
     Args:
         base_note (str): The key to play in, with an optional setting of
-                         numbers to denote pitch of the key. 'C0' is an octave
-                         lower than 'C1' for instance.
+            numbers to denote pitch of the key. 'C0' is an octave
+            lower than 'C1' for instance.
         scale (str, optional): Either minor or major. Defaults to 'major'.
+        with_rests (boolean, optional): If true, adds a key '' with tone 0
+            to be added as a rest for songs.
 
     Returns:
         dict: dictionary of 
@@ -141,5 +143,6 @@ def get_key(base_note, scale='major'):
                    if len(potential_keys) > _]
     returnable = {key: tone_map[key] for key in keys_in_scale}
     # this adds rest notes
-    returnable[''] = 0.0
+    if with_rests:
+        returnable[''] = 0.0
     return returnable
