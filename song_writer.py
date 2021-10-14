@@ -66,6 +66,7 @@ def zeldas_lullaby(stream):
               4, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 12]
 
     for i in range(len(melody)):
+        # /3.5 corrects the tempo
         sine_tone(stream, t[melody[i]], sixths[i]/3.5)
 
 
