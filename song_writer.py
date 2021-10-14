@@ -13,19 +13,22 @@ except ImportError: # Python 3
     xrange = range
 
 
-def sine_tone(stream, frequency, duration):
+def sine_tone(stream, frequency, duration, sostenuto = False):
     """Creates a tone for the given frequency and duration
        in the form of a sine wave.
 
     Args:
         stream (PyAudio stream object): An audio stream that tones can be added to.
-        frequency (float): The frequency of the tone to play
-        duration (float): How long to play the tone in seconds
+        frequency (float): The frequency of the tone to play.
+        duration (float): How long to play the tone in seconds.
+        sostenuto (boolean): If sustain should be applied. Default is False (exp. decay).
     """
 
     length = int(duration * sample_rate)
     factor = float(frequency) * (np.pi * 2) / sample_rate
     waveform = np.sin(np.arange(length) * factor)
+    if not sostenuto:
+        waveform *= (2 ** (np.arange(length) * factor * -1 / 400.))
     stream.write(waveform.astype(np.float32).tostring())
 
 
@@ -34,8 +37,8 @@ def random_song(stream, key='C4', tempo=60, scale='major'):
 
     Args:
         stream (PyAudio stream object): An audio stream that tones can be added to.
-        key (str): The muscial scale to base the song on. Default is 'C4'
-        scale (str): Either major or minor. Default is 'major'
+        key (str): The muscial scale to base the song on. Default is 'C4'.
+        scale (str): Either major or minor. Default is 'major'.
         tempo (int): Measure of beats per minute. Default is 60.
     """
     tempo_seconds = 60./tempo
@@ -48,7 +51,7 @@ def random_song(stream, key='C4', tempo=60, scale='major'):
 
 def zeldas_lullaby(stream):
     """Plays zelda's lullaby from Nintendo's Ocarina of Time. It is 3/4 time, so
-       I will be using 6ths 
+       I will be using 6ths.
 
     Args:
         stream (PyAudio stream object): An audio stream that tones can be added to.
