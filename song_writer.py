@@ -87,8 +87,6 @@ class MusicMaker():
                            0.1, sostenuto=self.sostenuto)
 
 
-        
-
     def sine_tone(self, frequency, duration, sostenuto = False):
         """Creates a tone for the given frequency and duration
         in the form of a sine wave.
