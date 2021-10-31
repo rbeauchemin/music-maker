@@ -56,7 +56,6 @@ class MusicMaker():
         if k in ['a', 's', 'd', 'f', 'j', 'k', 'l', ';']:
             if k not in self.active_keys:
                 self.active_keys.append(k)
-            print(f'active keys: {self.active_keys}')
         if k == 'shift':
             self.sostenuto = True
 
@@ -73,7 +72,6 @@ class MusicMaker():
             self.active_keys = [_ for _ in self.active_keys if _ != k]
         if k == 'shift':
             self.sostenuto = False
-        print(f'active keys: {self.active_keys}')
 
 
     @threaded
