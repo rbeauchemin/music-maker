@@ -112,7 +112,7 @@ tone_map = {'C0': 16.35,
             'A_sharp_8/B_flat_8': 7458.62,
             'B8': 7902.13}
 
-def get_key(base_note, scale='major', with_rests=False):
+def get_key(base_note, scale='major', with_rests=False, ordered_tones_only=False):
     """Returns a set of tones and their frequencies in either a major
     or a minor key
 
@@ -122,7 +122,9 @@ def get_key(base_note, scale='major', with_rests=False):
             lower than 'C1' for instance.
         scale (str, optional): Either minor or major. Defaults to 'major'.
         with_rests (boolean, optional): If true, adds a key '' with tone 0
-            to be added as a rest for songs.
+            to be added as a rest for songs. Defaults to False.
+        ordered_tones_only (boolean, optional): If true returns only a list
+            of ordered tones. Defaults to False
 
     Returns:
         dict: dictionary of 
@@ -141,6 +143,8 @@ def get_key(base_note, scale='major', with_rests=False):
         else [0, 2, 3, 5, 7, 8, 10, 12]
     keys_in_scale = [potential_keys[_] for _ in key_type_scale
                    if len(potential_keys) > _]
+    if ordered_tones_only:
+        return [tone_map[key] for key in keys_in_scale]
     returnable = {key: tone_map[key] for key in keys_in_scale}
     # this adds rest notes
     if with_rests:

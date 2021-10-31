@@ -6,8 +6,16 @@ import pyaudio
 import random
 import music_degree
 from pynput import keyboard
-from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
+from time import sleep
+# from concurrent.futures import ThreadPoolExecutor
 
+def threaded(fn):
+    def wrapper(*args, **kwargs):
+        thread = Thread(target=fn, args=args, kwargs=kwargs)
+        thread.start()
+        return thread
+    return wrapper
 
 class MusicMaker():
     def __init__(self):
@@ -23,7 +31,7 @@ class MusicMaker():
         # For the piano utility
         self.active_keys = []
         self.sostenuto = False
-        self.process_pool = ThreadPoolExecutor(max_workers=8)
+        # self.process_pool = ThreadPoolExecutor(max_workers=8)
         self.piano_mode = True
 
 
@@ -66,8 +74,20 @@ class MusicMaker():
         if k == 'shift':
             self.sostenuto = False
         print(f'active keys: {self.active_keys}')
-        
 
+
+    @threaded
+    def piano_watcher(self, keys):
+        key_mapper = {}
+        for i, keyboard_key in enumerate(['a', 's', 'd', 'f', 'j', 'k', 'l', ';']):
+            key_mapper[keyboard_key] = keys[i] if len(keys) > i else 0.0
+        while self.piano_mode:
+            sleep(0.1)
+            self.sine_tone([key_mapper[_] for _ in self.active_keys if _ in key_mapper],
+                           0.1, sostenuto=self.sostenuto)
+
+
+        
 
     def sine_tone(self, frequency, duration, sostenuto = False):
         """Creates a tone for the given frequency and duration
@@ -79,10 +99,17 @@ class MusicMaker():
             sostenuto (boolean, optional): True if sustain should be applied.
                 Default is False (exponential decay applied).
         """
-
         length = int(duration * self.sample_rate)
-        factor = float(frequency) * (np.pi * 2) / self.sample_rate
-        waveform = np.sin(np.arange(length) * factor)
+        waves = []
+        if isinstance(frequency, list):
+            if len(frequency) == 0:
+                return
+        else:
+            frequency = [frequency]
+        for f in frequency:
+            factor = float(f) * (np.pi * 2) / self.sample_rate
+            waves.append(np.sin(np.arange(length) * factor))
+        waveform = sum(waves)
         if not sostenuto:
             waveform *= (2 ** (np.arange(length) * factor * -1 / 400.))
         self.stream.write(waveform.astype(np.float32).tostring())
@@ -131,10 +158,12 @@ class MusicMaker():
               ' - Keys are in [asdfjkl;].'
               ' - Press ESC to quit.')
         self._init_piano_mode()
+        self.piano_watcher(keys)
         listener = keyboard.Listener(on_press=self.on_press,
                                      on_release=self.on_release)
         listener.start()  # start to listen on a separate thread
         listener.join()  # remove if main thread is polling self.keys
+        self.piano_mode = False
 
 
 if __name__ == '__main__':
@@ -144,7 +173,7 @@ if __name__ == '__main__':
         if mode == 'piano':
             note = input('Please input a base note [C4]: ') or 'C4'
             scale = input('Please input a scale ([major]/minor): ') or 'major'
-            m.play_piano(music_degree.get_key(note, scale=scale))
+            m.play_piano(music_degree.get_key(note, scale=scale, ordered_tones_only=True))
         if mode == 'random_song':
             m.random_song(key='C4', tempo=60, scale='minor')
         if mode == 'zeldas_lullaby':
